@@ -1,16 +1,20 @@
+# 🔹 Definición de red personalizada
 networks:
   ts_network:
-    driver: bridge
+    driver: bridge   # Permite que todos los contenedores se comuniquen entre sí
 
+# 🔹 Servicios del sistema
 services:
+
+  # 🗄️ BASE DE DATOS (PostgreSQL)
   postgres:
-    image: postgres:16-alpine
+    image: postgres:16-alpine   # Imagen ligera de PostgreSQL
     container_name: tienda_postgres
-    restart: unless-stopped
+    restart: unless-stopped     # Se reinicia automáticamente si falla
     env_file:
-      - .env
+      - .env                    # Variables de entorno (usuario, contraseña, DB)
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data  # Persistencia de datos
     networks:
       - ts_network
     healthcheck:
@@ -18,10 +22,12 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      # 🔍 Verifica que la BD esté lista antes de que otros servicios la usen
 
+  # ⚙️ BACKEND (API)
   backend:
     build:
-      context: ./backend-app
+      context: ./backend-app    # Carpeta donde está el backend
     image: ts_backend:latest
     container_name: tienda_backend
     restart: unless-stopped
@@ -29,61 +35,69 @@ services:
       - .env
     environment:
       - DATABASE_URL=postgresql://ts_admin:ts_secret@postgres:5432/tienda_sucursales?schema=public
+      # 🔗 Conexión directa a la base de datos (usa el nombre del servicio "postgres")
     ports:
-      - "4000:4000"
-      - "5555:5555"
+      - "4000:4000"  # API
+      - "5555:5555"  # (opcional: Prisma Studio u otro)
     depends_on:
       postgres:
         condition: service_healthy
+        # ⏳ Espera a que la BD esté lista antes de iniciar
     networks:
       - ts_network
 
+  # 🌐 FRONTEND (Interfaz web)
   frontend:
     build:
-      context: ./frontend-app
+      context: ./frontend-app   # Carpeta del frontend
     image: ts_frontend:latest
     container_name: tienda_frontend
     restart: unless-stopped
     environment:
       - VITE_API_URL=http://localhost:4000/api
+      # 🔗 URL para consumir el backend
     ports:
-      - "3000:3000"
+      - "3000:3000"  # Acceso desde navegador
     depends_on:
       - backend
+      # ⏳ Espera a que el backend esté activo
     networks:
       - ts_network
 
+  # 🌍 NGINX (Proxy inverso)
   nginx:
-    # Usamos build para crear la imagen con el config incluido
     build:
-      context: ./nginx
+      context: ./nginx   # Carpeta con configuración personalizada
     container_name: tienda_nginx
     restart: unless-stopped
     ports:
-      - "80:80"
-    # IMPORTANTE: Ya no hay sección de volumes aquí para nginx
+      - "80:80"  # Acceso principal (HTTP)
     depends_on:
       - backend
       - frontend
+      # 🔀 Redirige tráfico entre frontend y backend
     networks:
       - ts_network
 
+  # 🤖 JENKINS (CI/CD)
   jenkins:
     build:
-      context: ./jenkins
+      context: ./jenkins   # Configuración personalizada de Jenkins
     image: ts_jenkins:latest
     container_name: tienda_jenkins
-    user: root
+    user: root   # Permite acceso a Docker desde Jenkins
     restart: unless-stopped
     ports:
-      - "8080:8080"
-      - "50000:50000"
+      - "8080:8080"   # Interfaz web de Jenkins
+      - "50000:50000" # Comunicación con agentes
     volumes:
-      - jenkins_home:/var/jenkins_home
-      - /var/run/docker.sock:/var/run/docker.sock
+      - jenkins_home:/var/jenkins_home   # Guarda configuraciones de Jenkins
+      - /var/run/docker.sock:/var/run/docker.sock  
+      # 🔥 Permite a Jenkins ejecutar comandos Docker (clave para CI/CD)
     networks:
       - ts_network
 
+# 💾 Volúmenes (almacenamiento persistente)
 volumes:
-  postgres_data:
-  jenkins_home:
+  postgres_data:   # Guarda datos de la base de datos
+  jenkins_home:    # Guarda configuraciones de Jenkins
