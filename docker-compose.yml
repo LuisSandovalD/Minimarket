@@ -1,4 +1,4 @@
-# 🔹 Definición de red personalizada
+
 networks:
   ts_network:
     driver: bridge   # Permite que todos los contenedores se comuniquen entre sí
