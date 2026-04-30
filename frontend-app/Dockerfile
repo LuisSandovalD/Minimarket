@@ -10,7 +10,7 @@ RUN npm run build
 FROM node:20-alpine
 WORKDIR /app
 RUN npm install -g serve
-# Copiamos solo el resultado del build
+# Copiamos solo el resultado del build - Actualizado por Bruno
 COPY --from=build-env /app/dist ./dist
 
 EXPOSE 3000
