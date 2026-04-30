@@ -1,0 +1,89 @@
+networks:
+  ts_network:
+    driver: bridge
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: tienda_postgres
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - ts_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ts_admin -d tienda_sucursales"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend-app
+    image: ts_backend:latest
+    container_name: tienda_backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql://ts_admin:ts_secret@postgres:5432/tienda_sucursales?schema=public
+    ports:
+      - "4000:4000"
+      - "5555:5555"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - ts_network
+
+  frontend:
+    build:
+      context: ./frontend-app
+    image: ts_frontend:latest
+    container_name: tienda_frontend
+    restart: unless-stopped
+    environment:
+      - VITE_API_URL=http://localhost:4000/api
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - ts_network
+
+  nginx:
+    # Usamos build para crear la imagen con el config incluido
+    build:
+      context: ./nginx
+    container_name: tienda_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    # IMPORTANTE: Ya no hay sección de volumes aquí para nginx
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - ts_network
+
+  jenkins:
+    build:
+      context: ./jenkins
+    image: ts_jenkins:latest
+    container_name: tienda_jenkins
+    user: root
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - ts_network
+
+volumes:
+  postgres_data:
+  jenkins_home:
