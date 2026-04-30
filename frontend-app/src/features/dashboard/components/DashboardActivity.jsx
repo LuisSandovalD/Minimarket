@@ -1,4 +1,3 @@
-// Componente encargado de mostrar la actividad reciente del sistema.
 // Se utiliza un diseño tipo "skeleton loading" mientras la información
 // real aún no ha sido cargada desde el backend o la base de datos.
 

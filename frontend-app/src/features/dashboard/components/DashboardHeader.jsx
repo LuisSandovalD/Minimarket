@@ -1,4 +1,3 @@
-// Componente encargado del encabezado principal del dashboard.
 // Muestra el título y una breve descripción general del sistema.
 // También se implementó una estructura responsive para adaptar
 // correctamente el contenido en diferentes tamaños de pantalla.
